@@ -1,0 +1,22 @@
+{
+  "name": "doomviewer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "dev": "webpack --mode development",
+    "start": "webpack-dev-server --mode development --open"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "earcut": "^2.2.2",
+    "three": "^0.120.1"
+  },
+  "devDependencies": {
+    "html-webpack-plugin": "^4.4.1",
+    "webpack": "^4.44.1",
+    "webpack-cli": "^3.3.12",
+    "webpack-dev-server": "^3.11.0"
+  }
+}
