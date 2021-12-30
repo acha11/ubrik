@@ -66,7 +66,9 @@ var colors = [
 ];
 
 function setupThreeJs() {
-    renderer = new WebGLRenderer();
+    renderer = new WebGLRenderer({
+        antialias: true
+    });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
     
