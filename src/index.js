@@ -45,7 +45,7 @@ var rotationState = {
     cubeletsToRotate: [],
     rotationAxis: 0,
     rotationDirection: 0,
-    currentRotationDelta: 0,
+    currentRotationElapsed: 0,
     rotationInProgress: false
 };
 
@@ -104,6 +104,8 @@ function getWorldPosOfCubelet(c) {
     return worldPos;
 }
 
+var timeToRotate = 0.75;
+
 function setupThreeJs() {
     renderer = 
         new WebGLRenderer({
@@ -130,24 +132,23 @@ function setupThreeJs() {
             controls.update(delta);
 
             if (rotationState.rotationInProgress) {
-                const RotationScaleFactor = 2;
+                rotationState.currentRotationElapsed += delta;
 
-                var scaledDelta = delta * RotationScaleFactor;
+                var t = rotationState.currentRotationElapsed / timeToRotate;
 
-                var savedRotationDelta = rotationState.currentRotationDelta;
+                t = Math.min(t, 1);
 
-                rotationState.currentRotationDelta += scaledDelta;
+                var isRotationComplete = t == 1;
 
-                var isRotationComplete = rotationState.currentRotationDelta > Math.PI / 2;
-
-                var rotationToApply = 
-                    isRotationComplete
-                    // Make sure we don't over-rotate
-                    ? Math.PI / 2 - savedRotationDelta
-                    : scaledDelta;
+                var rotationToApply = (Math.PI / 2) * t;
 
                 for (var i = 0; i < rotationState.cubeletsToRotate.length; i++) {
                     var c = rotationState.cubeletsToRotate[i];
+
+                    // Reset the cubelet's matrix to the saved (pre-animation) state
+                    c.matrixAutoUpdate = false;
+
+                    c.matrix.copy(c.preAnimationMatrix);
 
                     var rotationMatrix = new Matrix4();
                     switch (rotationState.rotationAxis) {
@@ -157,6 +158,12 @@ function setupThreeJs() {
                     }
 
                     c.applyMatrix4(rotationMatrix);
+
+                    //c.rotateX(0.01);
+
+                    //c.updateMatrix();
+
+                    //c.applyMatrix4(rotationMatrix);
                 }
 
                 if (isRotationComplete) {
@@ -168,6 +175,8 @@ function setupThreeJs() {
                     }
                 }
             }
+
+            scene.updateMatrixWorld();
         }
 
         requestAnimationFrame(animate);
@@ -316,7 +325,13 @@ function startRotation(affectedCubelets, rotationAxis, rotationDirection, comple
 
     rotationState.rotationAxis = rotationAxis;
     rotationState.rotationDirection = rotationDirection;
-    rotationState.currentRotationDelta = 0;
+    
+    rotationState.currentRotationElapsed = 0;
+
+    // Save initial transform matrix for each cubelet
+    for (var i = 0; i < cubelets.length; i++) {
+        cubelets[i].preAnimationMatrix = cubelets[i].matrix.clone();
+    }
 
     rotationState.rotationInProgress = true;
 
