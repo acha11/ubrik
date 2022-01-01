@@ -23,15 +23,15 @@ import Stats from 'three/examples/jsm/libs/stats.module.js';
 
 var clock = new Clock();
 
-var params = {
-    reset: reset,
-    startRandomMoves: startRandomMoves
-};
+// var params = {
+//     reset: reset,
+//     startRandomMoves: startRandomMoves
+// };
 
-var gui = new GUI();
+// var gui = new GUI();
     
-gui.add(params, 'reset').name('Reset');
-gui.add(params, 'startRandomMoves').name('Random moves');
+// gui.add(params, 'reset').name('Reset');
+// gui.add(params, 'startRandomMoves').name('Random moves');
 
 var renderer;
 var stats;
@@ -117,6 +117,13 @@ function easeOutElastic(x) {
       : Math.pow(2.3, -8 * x) * Math.sin((x * 3 - 0.75) * c4) + 1;
 }
 
+function easeOutBack(x) {
+    const c1 = 1.70158;
+    const c3 = c1 + 1;
+    
+    return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+}
+
 function setupThreeJs() {
     renderer = 
         new WebGLRenderer({
@@ -127,7 +134,7 @@ function setupThreeJs() {
     document.body.appendChild(renderer.domElement);
     
     stats = new Stats();
-    document.body.appendChild(stats.dom);
+    // document.body.appendChild(stats.dom);
 
     function animate() {               
         stats.update();
@@ -150,6 +157,7 @@ function setupThreeJs() {
                 t = Math.min(t, 1);
 
                 t = easeOutElastic(t);
+                //t = easeOutBack(t);
 
                 var isRotationComplete = t == 1;
 
@@ -200,11 +208,13 @@ function renderToThreeJs() {
     scene = new Scene();
     camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 20000);
 
-    camera.position.set(0, 0, 400);
+    camera.position.set(100, 100, 100);
 
     controls = new OrbitControls(camera, renderer.domElement);
-    controls.autoRotate = false;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.25;
     controls.enableDamping = true;
+
     controls.update();
 
     // Lights
@@ -485,7 +495,7 @@ function buildScene(scene) {
     cubelets.push(buildAndAddCubelet(scene, null, null, null,    3, null,    5,  0, -1, -1)); // back bottom middle
     cubelets.push(buildAndAddCubelet(scene, null,    1, null,    3, null,    5,  1, -1, -1)); // back bottom right
 
-//    rotateRandomFaces();
+    window.setTimeout(rotateRandomFaces, 2500);
 
     // Full work out, leaves in same state it started
     // rotateTopFaceCCW()

@@ -1,0 +1,5 @@
+{
+    "appService.defaultWebAppToDeploy": "/subscriptions/94d3934f-1fe0-4f98-9ec3-2f41218f5560/resourceGroups/RG_Ubrik/providers/Microsoft.Web/sites/ubrik",
+    "appService.deploySubpath": "dist",
+    "appService.showBuildDuringDeployPrompt": false
+}

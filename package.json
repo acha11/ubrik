@@ -10,7 +10,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "earcut": "^2.2.2",
     "three": "^0.120.1"
   },
   "devDependencies": {
