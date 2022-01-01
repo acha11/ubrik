@@ -43,6 +43,9 @@ var scene;
 var camera;
 var controls;
 
+var cubeletORW, cubeletRWY, cubeletRW;
+var cubeletsToRotate = [];
+
 const stickerSize = 9;
 const cubeletSize = 10;
 
@@ -65,6 +68,9 @@ var colors = [
     new Color((128 << 24) | (192 << 16) | ( 96 <<  8) | ( 24 <<  0))  // ARGB orange
 ];
 
+var totalElapsed = 0;
+var nextTimeToLog = 1;
+
 function setupThreeJs() {
     renderer = new WebGLRenderer({
         antialias: true
@@ -79,8 +85,30 @@ function setupThreeJs() {
         stats.update();
 
         if (scene && camera && controls) {
-            var delta = clock.getDelta();        
+            var delta = clock.getDelta();
+            totalElapsed += delta;
+            
+            if (Math.floor(totalElapsed) > nextTimeToLog) {
+                nextTimeToLog = Math.floor(totalElapsed) + 1;
+
+                console.log(cubeletORW.position);
+            }
+
             controls.update(delta);
+
+            if (cubeletsToRotate && cubeletsToRotate.length > 0) {
+                for (var i = 0; i < cubeletsToRotate.length; i++) {
+                    var c = cubeletsToRotate[i];
+
+                    if (c.rotation.x < Math.PI / 2) {
+                        c.rotation.x += delta * 2;
+
+                        if (c.rotation.x > Math.PI / 2) {
+                            c.rotation.x = Math.PI / 2;
+                        }
+                    }
+                }
+            }
         }
 
         requestAnimationFrame(animate);
@@ -201,25 +229,35 @@ function buildCubelet(frontColorIndex, rightColorIndex, topColorIndex, backColor
 function buildAndAddCubelet(scene, frontColorIndex, rightColorIndex, topColorIndex, backColorIndex, leftColorIndex, bottomColorIndex, xOffset, yOffset, zOffset) {
     var mesh = buildCubelet(frontColorIndex, rightColorIndex, topColorIndex, backColorIndex, leftColorIndex, bottomColorIndex);
 
-    var grp = new Group();
+    var grpThatSetsPosition = new Group();
 
-    grp.add(mesh);
+    grpThatSetsPosition.add(mesh);
 
-    grp.position.set(cubeletSize * 2 * xOffset, cubeletSize * 2 * yOffset, cubeletSize * 2 * zOffset);
+    grpThatSetsPosition.position.set(cubeletSize * 2 * xOffset, cubeletSize * 2 * yOffset, cubeletSize * 2 * zOffset);
 
-    scene.add(grp);
+    var grpThatSetsRotationDuringAnimation = new Group();
+
+    grpThatSetsRotationDuringAnimation.add(grpThatSetsPosition);
+
+    scene.add(grpThatSetsRotationDuringAnimation);
+    
+    return grpThatSetsRotationDuringAnimation;
 }
 
 function buildScene(scene) {
     buildAndAddCubelet(scene,    0, null,    2, null,    4, null, -1,  1,  1); // top left
     buildAndAddCubelet(scene,    0, null,    2, null, null, null,  0,  1,  1); // top middle
-    buildAndAddCubelet(scene,    0,    1,    2, null, null, null,  1,  1,  1); // top right
+    cubeletRWY = buildAndAddCubelet(scene,    0,    1,    2, null, null, null,  1,  1,  1); // top right
     buildAndAddCubelet(scene,    0, null, null, null,    4, null, -1,  0,  1); // middle left
     buildAndAddCubelet(scene,    0, null, null, null, null, null,  0,  0,  1); // centre
-    buildAndAddCubelet(scene,    0,    1, null, null, null, null,  1,  0,  1); // middle left
+    cubeletRW  = buildAndAddCubelet(scene,    0,    1, null, null, null, null,  1,  0,  1); // middle right
     buildAndAddCubelet(scene,    0, null, null, null,    4,    5, -1, -1,  1); // bottom left
     buildAndAddCubelet(scene,    0, null, null, null, null,    5,  0, -1,  1); // bottom middle
-    buildAndAddCubelet(scene,    0,    1, null, null, null,    5,  1, -1,  1); // top right
+    cubeletORW = buildAndAddCubelet(scene,    0,    1, null, null, null,    5,  1, -1,  1); // bottom right
+
+    cubeletsToRotate.push(cubeletRWY);
+    cubeletsToRotate.push(cubeletRW);
+    cubeletsToRotate.push(cubeletORW);
 }
 
 setupThreeJs();
