@@ -43,12 +43,18 @@ var scene;
 var camera;
 var controls;
 
-var cubeletORW, cubeletRWY, cubeletRW;
-var cubeletsToRotate = [];
+var cubelets = [];
+
+var rotationState = {
+    cubeletsToRotate: [],
+    rotationAxis: 0,
+    rotationDirection: 0,
+    currentRotationDelta: 0,
+    rotationInProgress: false
+};
 
 const stickerSize = 9;
 const cubeletSize = 10;
-
 
 var mat = 
     new MeshBasicMaterial({
@@ -71,10 +77,26 @@ var colors = [
 var totalElapsed = 0;
 var nextTimeToLog = 1;
 
+function getWorldPosOfCubelet(c) {
+    // group for rotation contains
+    //    group for positioning contains
+    //        mesh for stickers
+    //
+    // we've been passed the group for rotation. so we go to its first child & ask where it is
+    // in world space.
+    var worldPos = new Vector3();
+
+    c.children[0].getWorldPosition(worldPos);
+
+    return worldPos;
+}
+
 function setupThreeJs() {
-    renderer = new WebGLRenderer({
-        antialias: true
-    });
+    renderer = 
+        new WebGLRenderer({
+            antialias: true
+        });
+
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
     
@@ -91,22 +113,41 @@ function setupThreeJs() {
             if (Math.floor(totalElapsed) > nextTimeToLog) {
                 nextTimeToLog = Math.floor(totalElapsed) + 1;
 
-                console.log(cubeletORW.position);
+                console.log(getWorldPosOfCubelet(cubelets[0]));
             }
 
             controls.update(delta);
 
-            if (cubeletsToRotate && cubeletsToRotate.length > 0) {
-                for (var i = 0; i < cubeletsToRotate.length; i++) {
-                    var c = cubeletsToRotate[i];
+            if (rotationState.rotationInProgress) {
+                const RotationScaleFactor = .255;
 
-                    if (c.rotation.x < Math.PI / 2) {
-                        c.rotation.x += delta * 2;
+                var scaledDelta = delta * RotationScaleFactor;
 
-                        if (c.rotation.x > Math.PI / 2) {
-                            c.rotation.x = Math.PI / 2;
-                        }
+                var savedRotationDelta = rotationState.currentRotationDelta;
+
+                rotationState.currentRotationDelta += scaledDelta;
+
+                var isRotationComplete = rotationState.currentRotationDelta > Math.PI / 2;
+
+                var rotationToApply = 
+                    isRotationComplete
+                    // Make sure we don't over-rotate
+                    ? Math.PI / 2 - savedRotationDelta
+                    : scaledDelta;
+
+                for (var i = 0; i < rotationState.cubeletsToRotate.length; i++) {
+                    var c = rotationState.cubeletsToRotate[i];
+
+                    switch (rotationState.rotationAxis) {
+                        case 0: c.rotation.x += rotationToApply * rotationState.rotationDirection; break;
+                        case 1: c.rotation.y += rotationToApply * rotationState.rotationDirection; break;
+                        case 2: c.rotation.z += rotationToApply * rotationState.rotationDirection; break;
                     }
+                }
+
+                if (isRotationComplete) {
+                    // Stop any further rotation
+                    rotationState.rotationInProgress = false;
                 }
             }
         }
@@ -244,20 +285,66 @@ function buildAndAddCubelet(scene, frontColorIndex, rightColorIndex, topColorInd
     return grpThatSetsRotationDuringAnimation;
 }
 
-function buildScene(scene) {
-    buildAndAddCubelet(scene,    0, null,    2, null,    4, null, -1,  1,  1); // top left
-    buildAndAddCubelet(scene,    0, null,    2, null, null, null,  0,  1,  1); // top middle
-    cubeletRWY = buildAndAddCubelet(scene,    0,    1,    2, null, null, null,  1,  1,  1); // top right
-    buildAndAddCubelet(scene,    0, null, null, null,    4, null, -1,  0,  1); // middle left
-    buildAndAddCubelet(scene,    0, null, null, null, null, null,  0,  0,  1); // centre
-    cubeletRW  = buildAndAddCubelet(scene,    0,    1, null, null, null, null,  1,  0,  1); // middle right
-    buildAndAddCubelet(scene,    0, null, null, null,    4,    5, -1, -1,  1); // bottom left
-    buildAndAddCubelet(scene,    0, null, null, null, null,    5,  0, -1,  1); // bottom middle
-    cubeletORW = buildAndAddCubelet(scene,    0,    1, null, null, null,    5,  1, -1,  1); // bottom right
+function startRotation(affectedCubelets, rotationAxis, rotationDirection) {
+    rotationState.cubeletsToRotate = affectedCubelets;
 
-    cubeletsToRotate.push(cubeletRWY);
-    cubeletsToRotate.push(cubeletRW);
-    cubeletsToRotate.push(cubeletORW);
+    rotationState.rotationAxis = rotationAxis;
+    rotationState.rotationDirection = rotationDirection;
+
+    rotationState.rotationInProgress = true;
+}
+
+function rotateCubelets(shouldCubeletBeRotatedBasedOnPosition, axis, direction) {
+    var cubeletsToRotate = [];
+
+    // Find the cubelets on the right face
+    for (var i = 0; i < cubelets.length; i++) {
+        var pos = getWorldPosOfCubelet(cubelets[i]);
+
+        if (shouldCubeletBeRotatedBasedOnPosition(pos)) {
+            cubeletsToRotate.push(cubelets[i]);
+        }
+    }
+
+    startRotation(cubeletsToRotate, axis, direction );
+}
+
+function rotateRightFaceCW() {
+    rotateCubelets(function (p) { return p.x > 19; }, 0, -1);
+}
+
+function rotateRightFaceCCW() {
+    rotateCubelets(function (p) { return p.x > 19; }, 0, 1);
+}
+
+function rotateLeftFaceCW() {
+    rotateCubelets(function (p) { return p.x < -19; }, 0, 1);
+}
+
+function rotateLeftFaceCCW() {
+    rotateCubelets(function (p) { return p.x < -19; }, 0, -1);
+}
+
+function rotateTopFaceCW() {
+    rotateCubelets(function (p) { return p.y > 19; }, 1, -1);
+}
+
+function rotateTopFaceCCW() {
+    rotateCubelets(function (p) { return p.y > 19; }, 1, 1);
+}
+
+function buildScene(scene) {
+    cubelets.push(buildAndAddCubelet(scene,    0, null,    2, null,    4, null, -1,  1,  1)); // top left
+    cubelets.push(buildAndAddCubelet(scene,    0, null,    2, null, null, null,  0,  1,  1)); // top middle
+    cubelets.push(buildAndAddCubelet(scene,    0,    1,    2, null, null, null,  1,  1,  1)); // top right
+    cubelets.push(buildAndAddCubelet(scene,    0, null, null, null,    4, null, -1,  0,  1)); // middle left
+    cubelets.push(buildAndAddCubelet(scene,    0, null, null, null, null, null,  0,  0,  1)); // centre
+    cubelets.push(buildAndAddCubelet(scene,    0,    1, null, null, null, null,  1,  0,  1)); // middle right
+    cubelets.push(buildAndAddCubelet(scene,    0, null, null, null,    4,    5, -1, -1,  1)); // bottom left
+    cubelets.push(buildAndAddCubelet(scene,    0, null, null, null, null,    5,  0, -1,  1)); // bottom middle
+    cubelets.push(buildAndAddCubelet(scene,    0,    1, null, null, null,    5,  1, -1,  1)); // bottom right
+
+    rotateTopFaceCCW();
 }
 
 setupThreeJs();
