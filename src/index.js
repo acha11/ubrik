@@ -106,6 +106,17 @@ function getWorldPosOfCubelet(c) {
 
 var timeToRotate = 0.75;
 
+// https://easings.net/#easeOutElastic
+function easeOutElastic(x) {
+    const c4 = (2 * Math.PI) / 3;
+    
+    return x === 0
+      ? 0
+      : x === 1
+      ? 1
+      : Math.pow(2.3, -8 * x) * Math.sin((x * 3 - 0.75) * c4) + 1;
+}
+
 function setupThreeJs() {
     renderer = 
         new WebGLRenderer({
@@ -138,6 +149,8 @@ function setupThreeJs() {
 
                 t = Math.min(t, 1);
 
+                t = easeOutElastic(t);
+
                 var isRotationComplete = t == 1;
 
                 var rotationToApply = (Math.PI / 2) * t;
@@ -158,12 +171,6 @@ function setupThreeJs() {
                     }
 
                     c.applyMatrix4(rotationMatrix);
-
-                    //c.rotateX(0.01);
-
-                    //c.updateMatrix();
-
-                    //c.applyMatrix4(rotationMatrix);
                 }
 
                 if (isRotationComplete) {
